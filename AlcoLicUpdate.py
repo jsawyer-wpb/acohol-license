@@ -1,74 +1,124 @@
 
+import os, arcpy, smtplib, string, traceback, datetime
 
 
-import arcpy,traceback
-
-
-# connections
 arcpy.env.workspace = r"Database Connections\SDE@Planning.sde"
 arcpy.env.overwriteOutput = True
 db_conn = r"Database Connections\SDE@Planning.sde"
-##publish_conn = r"GIS Servers\arcgis on gis.wpb.org (publisher)"
 
 
 #   data
 ComPlus_AlcoLic = r"Database Connections\GISUSER@comprod.sde\COMPLUS.WPB_GIS_ALCOHOL_LICENSES"
 Planning_AlcoLic = r"Planning.SDE.WPB_GIS_ALCOHOL_LICENSES"
 Planning_AlcoLic_BU = r"Planning.SDE.WPB_GIS_ALCOHOL_LICENSES_bu"
-sql = "SELECT PARCELS.[OBJECTID],[OWNPARCELID] AS PARCELS_PCN,[SRCREF],[OWNTYPE],[GISdata_GISADMIN_OwnerParcel_AR],[LASTUPDATE],[LASTEDITOR],[Shape],[PARCEL_ID] AS COMPLUS_PCN,[BUSINESS_ID],[LICENSE],[CATEGORY],[CATEGORY_DESC],[STAT],[ISSUE],[EXPIRATION],[BUS_ENTITY_ID],[BUS_NAME],[BUS_PROD],[SERVICE],[ADRS1],[BUS_PHONE],[BUS_EMAIL] FROM [Planning].[sde].[CODEENFORCEMENT_PARCELS] PARCELS,[Planning].[sde].[WPB_GIS_ALCOHOL_LICENSES] ALCOLIC WHERE PARCELS.OWNPARCELID = ALCOLIC.PARCEL_ID"
+Fields = [Field.baseName.encode('ascii') for Field in arcpy.ListFields(ComPlus_AlcoLic)]
 query_layer = "ALCOLICENCE_QL"
 alco_licence_poly = "Alco_licence_poly"
+alco_license_points = "Alco_license_points"
 alco_license ="AlcoholLicense_complus"
 spatialref = arcpy.Describe(r"Database Connections\SDE@Planning.sde\Planning.SDE.LandUsePlanning").spatialReference.exportToString()
+arcpy.CreateTable_management(db_conn,"TempTable",Planning_AlcoLic)
+TempTable = r"Database Connections\SDE@Planning.sde\Planning.SDE.TempTable"
+
 
 try:
-#   update table from ComPLus
     arcpy.AcceptConnections(db_conn,True)
     arcpy.DisconnectUser(db_conn,'ALL')
     arcpy.AcceptConnections(db_conn,False)
 
-    if arcpy.Exists(Planning_AlcoLic) and arcpy.Exists(Planning_AlcoLic_BU):
-        print 'from 1'
-        arcpy.Delete_management(Planning_AlcoLic_BU)
-        arcpy.CopyRows_management(Planning_AlcoLic,Planning_AlcoLic_BU)
-        arcpy.Delete_management(Planning_AlcoLic)
-        arcpy.CopyRows_management(ComPlus_AlcoLic,Planning_AlcoLic)
-    elif arcpy.Exists(Planning_AlcoLic) and not arcpy.Exists(Planning_AlcoLic_BU):
-        print 'from 2'
-        arcpy.CopyRows_management(Planning_AlcoLic,Planning_AlcoLic_BU)
-        arcpy.Delete_management(Planning_AlcoLic)
-        arcpy.CopyRows_management(ComPlus_AlcoLic,Planning_AlcoLic)
-    elif not arcpy.Exists(Planning_AlcoLic) and arcpy.Exists(Planning_AlcoLic_BU):
-        print 'from 3'
-        arcpy.Delete_management(Planning_AlcoLic_BU)
-        arcpy.CopyRows_management(ComPlus_AlcoLic,Planning_AlcoLic)
-        arcpy.CopyRows_management(Planning_AlcoLic,Planning_AlcoLic_BU)
-    elif not arcpy.Exists(Planning_AlcoLic) and not arcpy.Exists(Planning_AlcoLic_BU):
-        print 'from 4'
-        arcpy.CopyRows_management(ComPlus_AlcoLic,Planning_AlcoLic)
+    # create lists of license numbers from Community Plus and corresponding table in GIS Cluster
+    ComplusLicenses = []
+    PlanningLicenses = []
+
+    with arcpy.da.SearchCursor(ComPlus_AlcoLic,'LICENSE') as ComplusUC:
+        for record in ComplusUC:
+            ComplusLicenses.append(record)
+
+    with arcpy.da.SearchCursor(Planning_AlcoLic,'LICENSE') as PlanAlcUC:
+        for record in PlanAlcUC:
+            PlanningLicenses.append(record)
+
+    #   Compare the two lists, write to Delta which licenses are in complus but not in planning
+
+    delta = []
+
+    for record in ComplusLicenses:
+        if not record in PlanningLicenses:
+            delta.append(record)
+
+    #   If there is at least one record, then proceed to append record to GIS_ALCOHOL_LICENSES, and create a point fc of reccord and append to AlocholLicense_complus
+
+    if len(delta) == 0:
+        pass
     else:
-        print 'How did I get here?'
+        #   change list to a tuple (in prepartation of creating a text string for the query). Delta is in unicode, need it in plain ascii text for query
 
+        delta = [x[0].encode('ascii') for x in delta] # lsit comprehension to reformat to ascii in place
+        delta_tup = tuple(delta)
+        print delta_tup
 
-    #   create query layer
-    print 'mql'
-##    arcpy.MakeQueryLayer_management(input_database=db_conn, out_layer_name=query_layer, query=sql, oid_fields="OBJECTID", shape_type="POLYGON", srid="2881", spatial_reference="PROJCS['NAD_1983_HARN_StatePlane_Florida_East_FIPS_0901_Feet',GEOGCS['GCS_North_American_1983_HARN',DATUM['D_North_American_1983_HARN',SPHEROID['GRS_1980',6378137.0,298.257222101]],PRIMEM['Greenwich',0.0],UNIT['Degree',0.0174532925199433]],PROJECTION['Transverse_Mercator'],PARAMETER['False_Easting',656166.6666666665],PARAMETER['False_Northing',0.0],PARAMETER['Central_Meridian',-81.0],PARAMETER['Scale_Factor',0.9999411764705882],PARAMETER['Latitude_Of_Origin',24.33333333333333],UNIT['Foot_US',0.3048006096012192]];-17791300 -41645400 3048.00609601219;-100000 10000;-100000 10000;3.28083333333333E-03;0.001;0.001;IsHighPrecision")
-    arcpy.MakeQueryLayer_management(input_database=db_conn, out_layer_name=query_layer, query=sql, oid_fields="OBJECTID", shape_type="POLYGON", srid="2881", spatial_reference=spatialref)
-    arcpy.management.CopyFeatures(query_layer, alco_licence_poly, None, None, None, None)
+        #   save the query as a string
 
-    print 'mql done'
-    #   polygons to points
-    print 'feature to point'
-    arcpy.FeatureToPoint_management(alco_licence_poly,alco_license,"INSIDE")
-    print 'feature to point done'
+        sqlquery = "LICENSE IN {}".format(delta_tup)
 
-    arcpy.management.Delete(Planning_AlcoLic_BU)
-    arcpy.management.Delete(alco_licence_poly)
+        #   it doesnt like insert cursor, so make a temp table and append to that, then append table
+
+        with arcpy.da.SearchCursor(ComPlus_AlcoLic,Fields,sqlquery) as sc:
+            with arcpy.da.InsertCursor(TempTable,Fields) as ic:
+                for record in sc:
+                    ic.insertRow(record)
+
+        arcpy.Append_management(TempTable,Planning_AlcoLic)
+
+        sql = "SELECT PARCELS.[OBJECTID],[OWNPARCELID] AS PARCELS_PCN,[SRCREF],[OWNTYPE],[GISdata_GISADMIN_OwnerParcel_AR],[LASTUPDATE],[LASTEDITOR],[Shape],[PARCEL_ID] AS COMPLUS_PCN,[BUSINESS_ID],[LICENSE],[CATEGORY],[CATEGORY_DESC],[STAT],[ISSUE],[EXPIRATION],[BUS_ENTITY_ID],[BUS_NAME],[BUS_PROD],[SERVICE],[ADRS1],[BUS_PHONE],[BUS_EMAIL] FROM [Planning].[sde].[CODEENFORCEMENT_PARCELS] PARCELS,[Planning].[sde].[WPB_GIS_ALCOHOL_LICENSES] ALCOLIC WHERE PARCELS.OWNPARCELID = ALCOLIC.PARCEL_ID AND {}".format(sqlquery)
+
+        arcpy.MakeQueryLayer_management(input_database=db_conn, out_layer_name=query_layer, query=sql, oid_fields="OBJECTID", shape_type="POLYGON", srid="2881", spatial_reference=spatialref)
+        arcpy.management.CopyFeatures(query_layer, alco_licence_poly, None, None, None, None)
+        arcpy.FeatureToPoint_management(alco_licence_poly,alco_license_points,"INSIDE")
+        arcpy.Append_management(alco_license_points,alco_license)
+
+        TempTable_report = []
+        with arcpy.da.SearchCursor(TempTable,'[PARCELS_PCN','LICENSE','BUS_NAME','ADRS1') as TTSC:
+            for row in TTSC:
+                TempTable_report,append(row)
+
+        today =  datetime.datetime.now().strftime("%Y-%d-%m")
+        subject = 'New Alcohol Licenses from Community Plus ' +  today
+        sendto = "jssawyer@wpb.org,cdglass@wpb.org" # ,'JJudge@wpb.org','NKerr@wpb.org'
+        sender = 'scriptmonitorwpb@gmail.com'
+        sender_pw = "Bibby1997"
+        server = 'smtp.gmail.com'
+        body_text = "From: {0}\r\nTo: {1}\r\nSubject: {2}\r\nHere is a list of the License Numbers of the new licenses.  These have been added to AlcholLicense_complus:\n\n{3}".format(sender, sendto, subject,delta_tup)
+
+        gmail = smtplib.SMTP(server, 587)
+        gmail.starttls()
+        gmail.login(sender,sender_pw)
+        gmail.sendmail(sender,sendto,body_text)
+        gmail.quit()
+
+        del_list = (TempTable,alco_licence_poly,alco_license_points)
+        for fc in del_list:
+            arcpy.Delete_management(fc)
+
 
     arcpy.AcceptConnections(db_conn,True)
+
 except Exception as E:
-    print "game over man"
     arcpy.AcceptConnections(db_conn,True)
 
+    today =  datetime.datetime.now().strftime("%Y-%d-%m")
+    subject = 'Alcohol License script failure report ' +  today
+    sendto = "jssawyer@wpb.org,sladesawyer@gmail.com" # ,'JJudge@wpb.org','NKerr@wpb.org'
+    sender = 'scriptmonitorwpb@gmail.com'
+    sender_pw = "Bibby1997"
+    server = 'smtp.gmail.com'
     log = traceback.format_exc()
-    print "{}\n{}\n{}".format(type(E).__name__, E.args, log)
+    body_text = "From: {0}\r\nTo: {1}\r\nSubject: {2}\r\nAn error occured. Here are the Type, arguements, and log of the error\n\n{3}\n{4}\n{5}".format(sender, sendto, subject,type(E).__name__, E.args, log)
+
+    gmail = smtplib.SMTP(server, 587)
+    gmail.starttls()
+    gmail.login(sender,sender_pw)
+    gmail.sendmail(sender,sendto,body_text)
+    gmail.quit()
+
+    print body_text
