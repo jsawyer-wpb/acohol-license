@@ -96,7 +96,7 @@ try:
         report = string_obj.getvalue()
 
         today =  datetime.datetime.now().strftime("%d-%m-%Y")
-        subject = 'report test ' +  today
+        subject = 'Alcohol License report ' +  today
         sendto = "jssawyer@wpb.org,cdglass@wpb.org" # ,'JJudge@wpb.org','NKerr@wpb.org'
         sender = 'scriptmonitorwpb@gmail.com'
         sender_pw = "Bibby1997"
