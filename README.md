@@ -1,5 +1,5 @@
 # ALCOHOL-LICENSE
-Script to copy new applications for alcohol licenses from Community Plus to GIS-Cluster
+Script to copy data for alcohol licenses from Community Plus to GIS-Cluster
 
 ## 1. first edit:
   * email on failure added
