@@ -3,8 +3,8 @@ Script to copy new applications for alcohol licenses from Community Plus to GIS-
 
 ##  <b>first edit</b>:
 
-   *email on failure added  
-   *reworked workflow to append to existing feature class the new records as opposed to recreating the entire feature class
+   1.email on failure added  
+   2.reworked workflow to append to existing feature class the new records as opposed to recreating the entire feature class
 
 ##  <b>second edit</b>:
 
