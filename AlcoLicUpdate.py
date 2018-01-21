@@ -50,7 +50,11 @@ try:
     #   If there is at least 2 record, then proceed to append record to GIS_ALCOHOL_LICENSES, and create a point fc of reccord and append to AlocholLicense_complus
 
     if len(delta) == 1:
-        pass
+        with open(r"C:\Users\jsawyer\Desktop\Tickets\alcohol permits\logfile.txt","a") as log:
+            now = datetime.datetime.now().strftime("%Y-%d-%m")
+            log.write("\n-----------------\n")
+            log.write(now + " no new alcohol licenses found\n\n")
+
     else:
         #   change list to a tuple (in prepartation of creating a text string for the query). Delta is in unicode, need it in plain ascii text for query
 
@@ -109,6 +113,14 @@ try:
         gmail.login(sender,sender_pw)
         gmail.sendmail(sender,sendto,body_text)
         gmail.quit()
+
+        with open(r"C:\Users\jsawyer\Desktop\Tickets\alcohol permits\logfile.txt","a") as log:
+            now = datetime.datetime.now().strftime("%Y-%d-%m")
+            log.write("\n------------------------------------------\n\n")
+            log.write(report)
+            log.write("\n")
+
+
 
         del_list = (TempTable,alco_licence_poly,alco_license_points)
         for fc in del_list:
