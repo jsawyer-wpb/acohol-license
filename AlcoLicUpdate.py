@@ -105,7 +105,7 @@ try:
         sender = 'scriptmonitorwpb@gmail.com'
         sender_pw = "Bibby1997"
         server = 'smtp.gmail.com'
-        body_text = "From: {0}\r\nTo: {1}\r\nSubject: {2}\r\nHere is a list of the new licenses.  These have been added to AlcholLicense_complus:\n\n{3}".format(sender, sendto, subject,report)
+        body_text = "From: {0}\r\nTo: {1}\r\nSubject: {2}\r\nHere is a list of the new licenses.\nThese have been added to AlcoholLicense_complus:\n\nPCN\tLicense Number\tBusiness Name\tAddress\n\n{3}".format(sender, sendto, subject,report)
 
 
         gmail = smtplib.SMTP(server, 587)
@@ -117,6 +117,8 @@ try:
         with open(r"C:\Users\jsawyer\Desktop\Tickets\alcohol permits\logfile.txt","a") as log:
             now = datetime.datetime.now().strftime("%Y-%d-%m")
             log.write("\n------------------------------------------\n\n")
+            log.write(now)
+            log.write('/n')
             log.write(report)
             log.write("\n")
 
