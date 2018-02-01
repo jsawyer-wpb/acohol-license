@@ -12,5 +12,9 @@ Script to copy data for alcohol licenses from Community Plus to GIS-Cluster
 ## 3. clean up edit:
 
   * cleaned up so it looks nice; print statements deleted, extraneous commented out code gone
+  
+  
+## 4. addition of log
+   *  Added a text file log written to Slades pc (must be run locally) which indicates no new alcohol licenses were found or prints out a report of the new licenses found to same log file (it is the same report emailed to slade and caroline).
 
 
