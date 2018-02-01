@@ -1,5 +1,12 @@
+import os
+import arcpy
+import smtplib
+import string
+import traceback
+import datetime
+import StringIO
 
-import os, arcpy, smtplib, string, traceback, datetime, StringIO
+
 
 
 arcpy.env.workspace = r"Database Connections\SDE@Planning.sde"
