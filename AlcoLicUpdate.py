@@ -1,7 +1,4 @@
-import os
-import arcpy
-import smtplib
-import string
+
 import traceback
 import datetime
 import StringIO
